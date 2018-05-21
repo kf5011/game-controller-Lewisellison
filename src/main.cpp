@@ -6,15 +6,6 @@
 #include <FXOS8700Q.h>
 #include <C12832.h>
 
-/* LEDs set initially to off */
-DigitalOut red(PTB22,1); // For crashed lander
-DigitalOut green(PTE26,1); // For flying lander
-DigitalOut topRed(D5,1); // For low fuel
-DigitalOut blue(PTB21,1); //
-
-/* Speaker */
-PwmOut speaker(D6); // For low fuel
-
 /* display */
 C12832 lcd(D11, D13, D12, D7, D10);
 
@@ -38,14 +29,6 @@ DigitalIn joyRight(A5); // Digital roll
 float throttle = 0;
 float roll = 0;
 
-/* Functions to turn LEDs either ON or OFF */
-void on(DigitalOut colour) {
-  colour.write(0);
-}
-void off(DigitalOut colour) {
-  colour.write(1);
-}
-
 /* Function to determine if digital button is pressed */
 bool isPressed(DigitalIn button) {
   if (!button.read()) {
@@ -63,15 +46,15 @@ void user_input(void) {
   motion_data_units_t a;
   acc.getAxis(a);
 
-  // Digital throttle control from joystick
+  // Joystick throttle
   if(isPressed(joyUp)) {
     throttle = 100;
   }
   else {
-    // Variable throttle from left potentiometer
+    // Change in throttle - left Potentiometer
     throttle = left.read() * 100;
 
-    // Allow throttle to read 100
+    // Allows throttle to reach 100
     if (throttle >= 99.5) {
       throttle = 100;
     }
@@ -85,22 +68,21 @@ void user_input(void) {
     roll =+ 1;
   }
   else {
-    // Set up angle for accelerometer roll control
+    // Angle for accelerometer roll control
     float magnitude = sqrt((a.x*a.x) + (a.y*a.y) + (a.z*a.z));
     a.x = a.x/magnitude;
-
     float angle = asin(a.x);
 
     // Set angle deadband
     if (angle <= 0.1 && angle >= -0.1) {
-      angle = 0;
+    angle = 0;
     }
 
-    roll = -(angle); // Correct orientation
+    roll = -(angle); // Orientation
   }
 }
 
-/* States from Lander */
+/* Lander */
 float altitude = 0;
 float fuel = 100;
 bool isFlying = 0;
@@ -109,7 +91,7 @@ int orientation = 0;
 int xVelocity = 0;
 int yVelocity = 0;
 
-/* YOU will have to hardwire the IP address in here */
+/* IP address */
 SocketAddress lander("192.168.80.9",65200);
 SocketAddress dash("192.168.80.6",65250);
 
@@ -160,10 +142,10 @@ void communications(void){
     else if(strcmp(key, "orientation")==0) {
       orientation = atoi(value);
     }
-    else if(strcmp(key, "Vx")==0) {
+    else if(strcmp(key, "xVelocity")==0) {
       xVelocity = atoi(value);
     }
-    else if(strcmp(key, "Vy")==0) {
+    else if(strcmp(key, "yVelocity")==0) {
       yVelocity = atoi(value);
     }
   }
@@ -194,14 +176,12 @@ int main() {
   const char *ip = eth.get_ip_address();
   printf("IP address is: %s\n", ip ? ip : "No IP");
 
-  /* open udp for communications on the ethernet */
+  /* udp communications ethernet */
   udp.open( &eth);
 
   printf("lander is on %s/%d\n",lander.get_ip_address(),lander.get_port() );
   printf("dash   is on %s/%d\n",dash.get_ip_address(),dash.get_port() );
 
-  /* Call periodic tasks */
-  // 50ms used for responsiveness
   periodic.call_every(50, communications);
   periodic.call_every(50, dashboard);
   periodic.call_every(50, user_input);
@@ -209,42 +189,6 @@ int main() {
   /* start event dispatching thread */
   dispatch.start( callback(&periodic, &EventQueue::dispatch_forever) );
 
-  while(1) {
-
-    /* update display at whatever rate is possible */
-    /* Show user information on the LCD */
-    lcd.locate(0,0);
-    lcd.printf("Altitude: %d \nFuel: %d \nVelocity X: %d   Y: %d  ",int(altitude),int(fuel),xVelocity,yVelocity);
-
-    /* Set LEDs as appropriate to show boolean states */
-    if(isFlying) {
-      off(red);
-      on(blue);
-    }
-    else if(crashed) {
-      off(blue);
-      on(red);
-
-    // Flash light and sound speaker if low fuel and not crashed.
-    if(fuel <= 50 && !crashed) {
-      speaker.period(1.0/440);
-      speaker.write(0.5);
-      on(topRed);
-      wait(0.25);
-      speaker.write(0);
-      off(topRed);
-    }
-
-  else if ((isFlying == false) && (crashed == false)){
-      off(red);
-      on(green);
-      lcd.locate(0,0);
-      lcd.printf("You have landed");
-      break;
-    }
-
-    wait(0.5);/* You may want to change this time
-    to get a responsive display */
-  }
+ 
 }
 }
