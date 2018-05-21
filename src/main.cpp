@@ -14,7 +14,7 @@ Thread dispatch;
 EventQueue periodic;
 
 /* Accelerometer */
-I2C i2c(PTE25, PTE24);
+I2C i2c(PTE25, PTE24);xVelocity
 FXOS8700QAccelerometer acc(i2c, FXOS8700CQ_SLAVE_ADDR1);
 
 /* Input from Potentiometers */
@@ -92,7 +92,7 @@ int xVelocity = 0;
 int yVelocity = 0;
 
 /* IP address */
-SocketAddress lander("192.168.80.9",65200);
+SocketAddress lander("192.168.80.6",65200);
 SocketAddress dash("192.168.80.6",65250);
 
 EthernetInterface eth;
@@ -142,10 +142,10 @@ void communications(void){
     else if(strcmp(key, "orientation")==0) {
       orientation = atoi(value);
     }
-    else if(strcmp(key, "xVelocity")==0) {
+    else if(strcmp(key, "Xy")==0) {
       xVelocity = atoi(value);
     }
-    else if(strcmp(key, "yVelocity")==0) {
+    else if(strcmp(key, "vY")==0) {
       yVelocity = atoi(value);
     }
   }
@@ -157,7 +157,8 @@ void dashboard(void){
   /* Create and format a message to the Dashboard */
   SocketAddress source;
   char buffer[512];
-  sprintf(buffer, "command:=\naltitude:%1.2f\nfuel:%1.2f\nflying:%d\ncrashed:%d\norientation:%d\nVx:%d\nVy:%d",altitude,fuel,isFlying,crashed,orientation,xVelocity, yVelocity); // No Spaces
+  sprintf(buffer, "command:=\naltitude:%1.2f\nfuel:%1.2f\nflying:%d\ncrashed:%d\norientation:%d\nVx:%d\nVy:%d",
+  altitude,fuel,isFlying,crashed,orientation,xVelocity, yVelocity); // No Spaces
 
   /* Send the message to the dashboard */
   udp.sendto( dash, buffer, strlen(buffer));
@@ -189,6 +190,5 @@ int main() {
   /* start event dispatching thread */
   dispatch.start( callback(&periodic, &EventQueue::dispatch_forever) );
 
- 
-}
+
 }
